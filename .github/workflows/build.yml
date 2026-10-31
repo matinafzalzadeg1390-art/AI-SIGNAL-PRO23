@@ -41,51 +41,48 @@ jobs:
 
           echo "PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
 
-      - name: Fix Java and Kotlin JVM targets
+      - name: Fix JVM targets
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          root = Path("extracted")
-          files = [
-              root / "app/build.gradle.kts",
-              root / "app/build.gradle"
-          ]
+          p = Path("extracted/app/build.gradle.kts")
 
-          target = next((p for p in files if p.exists()), None)
+          if not p.exists():
+              raise SystemExit("app/build.gradle.kts not found")
 
-          if target is None:
-              raise SystemExit("app/build.gradle(.kts) not found")
+          s = p.read_text()
 
-          if target.suffix == ".kts":
-              config = """
-          android {
+          if "compileOptions {" not in s:
+              s = s.replace(
+                  "android {",
+                  """android {
               compileOptions {
                   sourceCompatibility = JavaVersion.VERSION_17
                   targetCompatibility = JavaVersion.VERSION_17
-              }
+              }""",
+                  1
+              )
+
+          if "kotlinOptions {" not in s:
+              s = s.replace(
+                  "android {",
+                  """android {
               kotlinOptions {
                   jvmTarget = "17"
-              }
-          }
-          """
+              }""",
+                  1
+              )
           else:
-              config = """
-          android {
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-              kotlinOptions {
-                  jvmTarget = '17'
-              }
-          }
-          """
+              import re
+              s = re.sub(
+                  r'jvmTarget\s*=\s*["\'].*?["\']',
+                  'jvmTarget = "17"',
+                  s
+              )
 
-          with target.open("a") as f:
-              f.write("\\n" + config + "\\n")
-
-          print("Java and Kotlin targets set to 17")
+          p.write_text(s)
+          print("JVM targets configured successfully")
           PY
 
       - name: Setup Java 17
