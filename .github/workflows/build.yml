@@ -18,35 +18,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find and extract source ZIP
+      - name: Extract Android project
         run: |
-          ZIP_FILE=$(find . -maxdepth 3 -type f -iname 'aisignalpro23.zip' -print -quit)
+          ZIP_FILE="AI-SIGNAL-Binance-Live-Icon-AutoBuild.zip"
 
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: aisignalpro23.zip not found!"
-            echo "Files in repository:"
-            find . -maxdepth 3 -type f
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "ZIP file not found!"
             exit 1
           fi
 
-          mkdir -p extracted
+          mkdir extracted
           unzip -q "$ZIP_FILE" -d extracted
 
-      - name: Locate Android project
+      - name: Locate project
         run: |
           PROJECT_FILE=$(find extracted -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)
 
           if [ -z "$PROJECT_FILE" ]; then
-            echo "ERROR: Android Gradle project not found!"
+            echo "Android project not found!"
             find extracted -maxdepth 4 -type f
             exit 1
           fi
 
-          PROJECT_DIR=$(dirname "$PROJECT_FILE")
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Found project: $PROJECT_DIR"
+          echo "PROJECT_DIR=$(dirname "$PROJECT_FILE")" >> "$GITHUB_ENV"
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -57,7 +53,7 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build Android APK
+      - name: Build APK
         run: |
           if [ -f "$PROJECT_DIR/gradlew" ]; then
             chmod +x "$PROJECT_DIR/gradlew"
